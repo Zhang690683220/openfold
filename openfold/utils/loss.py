@@ -1470,7 +1470,10 @@ def experimentally_resolved_loss(
 ) -> torch.Tensor:
     errors = sigmoid_cross_entropy(logits, all_atom_mask)
     loss = torch.sum(errors * atom37_atom_exists, dim=-1)
-    loss = loss / (eps + torch.sum(atom37_atom_exists, dim=(-1, -2)))
+    # loss = loss / (eps + torch.sum(atom37_atom_exists, dim=(-1, -2)))
+    # Enable batch_size > 1
+    loss = loss / (eps + torch.sum(atom37_atom_exists, dim=(-1, -2))).reshape(
+        (eps+torch.sum(atom37_atom_exists, dim=(-1, -2))).shape[0],1)
     loss = torch.sum(loss, dim=-1)
 
     loss = loss * (
@@ -1582,7 +1585,9 @@ class AlphaFoldLoss(nn.Module):
         for loss_name, loss_fn in loss_fns.items():
             weight = self.config[loss_name].weight
             loss = loss_fn()
-            if(torch.isnan(loss) or torch.isinf(loss)):
+            # if(torch.isnan(loss) or torch.isinf(loss)):
+            # Enable batch_size > 1
+            if(torch.any(torch.isnan(loss)) or torch.any(torch.isinf(loss))):
                 #for k,v in batch.items():
                 #    if(torch.any(torch.isnan(v)) or torch.any(torch.isinf(v))):
                 #        logging.warning(f"{k}: is nan")
@@ -1605,4 +1610,6 @@ class AlphaFoldLoss(nn.Module):
         if(not _return_breakdown):
             return cum_loss
         
-        return cum_loss, losses
+        # return cum_loss, losses
+        # Enable batch_size > 1
+        return torch.mean(cum_loss, dim=0), losses
