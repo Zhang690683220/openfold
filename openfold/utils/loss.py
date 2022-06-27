@@ -43,9 +43,15 @@ def softmax_cross_entropy(logits, labels):
 
 
 def sigmoid_cross_entropy(logits, labels):
-    log_p = torch.log(torch.sigmoid(logits))
-    log_not_p = torch.log(torch.sigmoid(-logits))
-    loss = -labels * log_p - (1 - labels) * log_not_p
+    logits_dtype = logits.dtype
+    logits = logits.double()
+    labels = labels.double()
+    log_p = torch.nn.functional.logsigmoid(logits)
+    # log_p = torch.log(torch.sigmoid(logits))
+    log_not_p = torch.nn.functional.logsigmoid(-1 * logits)
+    # log_not_p = torch.log(torch.sigmoid(-logits))
+    loss = (-1. * labels) * log_p - (1. - labels) * log_not_p
+    loss = loss.to(dtype=logits_dtype)
     return loss
 
 
@@ -1475,13 +1481,13 @@ def experimentally_resolved_loss(
     loss = loss / (eps + torch.sum(atom37_atom_exists, dim=(-1, -2))).reshape(
         (eps+torch.sum(atom37_atom_exists, dim=(-1, -2))).shape[0],1)
     loss = torch.sum(loss, dim=-1)
-
+    
     loss = loss * (
         (resolution >= min_resolution) & (resolution <= max_resolution)
     )
 
     loss = torch.mean(loss)
-
+ 
     return loss
 
 
