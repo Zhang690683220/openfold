@@ -183,7 +183,9 @@ class LayerNorm(nn.Module):
 
     def forward(self, x): 
         d = x.dtype
-        if(d is torch.bfloat16 and not deepspeed.utils.is_initialized()):
+        # if(d is torch.bfloat16 and not deepspeed.utils.is_initialized()):
+        # adapt to deepspeed 0.6.5
+        if(d is torch.bfloat16):
             with torch.cuda.amp.autocast(enabled=False):
                 out = nn.functional.layer_norm(
                     x, 

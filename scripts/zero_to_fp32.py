@@ -13,6 +13,7 @@ import glob
 import math
 import os
 from collections import OrderedDict
+import re
 
 # while this script doesn't use deepspeed to recover data, since the checkpoints are pickled with
 # DeepSpeed data structures it has to be available in the current python environment.
@@ -375,6 +376,19 @@ def get_fp32_state_dict_from_zero_checkpoint(checkpoint_dir, tag=None):
         raise FileNotFoundError(f"Directory '{ds_checkpoint_dir}' doesn't exist")
 
     return _get_fp32_state_dict_from_zero_checkpoint(ds_checkpoint_dir)
+
+def get_global_step_from_zero_checkpoint(checkpoint_dir):
+    global_step = -1
+    latest_path = os.path.join(checkpoint_dir, 'latest')
+    if os.path.isfile(latest_path):
+        with open(latest_path, 'r') as fd:
+            tag = fd.read().strip()
+            match = re.match(r"global_step([0-9]+)", tag)
+            global_step = int(match.group(0))
+    else:
+            raise ValueError(f"Unable to find 'latest' file at {latest_path}")
+    return global_step
+
 
 
 def convert_zero_checkpoint_to_fp32_state_dict(checkpoint_dir, output_file, tag=None):
