@@ -384,7 +384,7 @@ def get_global_step_from_zero_checkpoint(checkpoint_dir):
         with open(latest_path, 'r') as fd:
             tag = fd.read().strip()
             match = re.match(r"global_step([0-9]+)", tag)
-            global_step = int(match.group(0))
+            global_step = int(match.group(1))
     else:
             raise ValueError(f"Unable to find 'latest' file at {latest_path}")
     return global_step
