@@ -16,7 +16,7 @@ DeepMind experiments. It is omitted here for the sake of reducing clutter. In
 cases where the *Nature* paper differs from the source, we always defer to the 
 latter.
 
-OpenFold is trainable in full precision or `bfloat16` with or without DeepSpeed, 
+OpenFold is trainable in full precision, half precision, or `bfloat16` with or without DeepSpeed, 
 and we've trained it from scratch, matching the performance of the original. 
 We've publicly released model weights and our training data &mdash; some 400,000 
 MSAs and PDB70 template hit files &mdash; under a permissive license. Model weights 
@@ -82,14 +82,9 @@ To install the HH-suite to `/usr/bin`, run
 
 ## Usage
 
-To download the databases used to train OpenFold and AlphaFold run:
-
-```bash
-bash scripts/download_data.sh data/
-```
-
-You have two choices for downloading protein databases, depending on whether 
-you want to use DeepMind's MSA generation pipeline (w/ HMMR & HHblits) or 
+If you intend to generate your own alignments, e.g. for inference, you have two 
+choices for downloading protein databases, depending on whether you want to use 
+DeepMind's MSA generation pipeline (w/ HMMR & HHblits) or 
 [ColabFold](https://github.com/sokrypton/ColabFold)'s, which uses the faster
 MMseqs2 instead. For the former, run:
 
@@ -108,9 +103,21 @@ Make sure to run the latter command on the machine that will be used for MSA
 generation (the script estimates how the precomputed database index used by
 MMseqs2 should be split according to the memory available on the system).
 
-Alternatively, you can use raw MSAs from our aforementioned MSA database or
+If you're using your own precomputed MSAs or MSAs from the RODA repository, 
+there's no need to download these alignment databases. Simply make sure that
+the `alignment_dir` contains one directory per chain and that each of these
+contains alignments (.sto, .a3m, and .hhr) corresponding to that chain. You
+can use `scripts/flatten_roda.sh` to reformat RODA downloads in this way.
+Note that the RODA alignments are NOT compatible with the recent .cif ground
+truth files downloaded by `scripts/download_alphafold_dbs.sh`. To fetch .cif 
+files that match the RODA MSAs, once the alignments are flattened, use 
+`scripts/download_roda_pdbs.sh`. That script outputs a list of alignment dirs 
+for which matching .cif files could not be found. These should be removed from 
+the alignment directory.
+
+Alternatively, you can use raw MSAs from 
 [ProteinNet](https://github.com/aqlaboratory/proteinnet). After downloading
-the latter database, use `scripts/prep_proteinnet_msas.py` to convert the data 
+that database, use `scripts/prep_proteinnet_msas.py` to convert the data 
 into a format recognized by the OpenFold parser. The resulting directory 
 becomes the `alignment_dir` used in subsequent steps. Use 
 `scripts/unpack_proteinnet.py` to extract `.core` files from ProteinNet text 
@@ -141,8 +148,8 @@ python3 run_pretrained_openfold.py \
     --jackhmmer_binary_path lib/conda/envs/openfold_venv/bin/jackhmmer \
     --hhblits_binary_path lib/conda/envs/openfold_venv/bin/hhblits \
     --hhsearch_binary_path lib/conda/envs/openfold_venv/bin/hhsearch \
-    --kalign_binary_path lib/conda/envs/openfold_venv/bin/kalign
-    --config_preset "model_1_ptm"
+    --kalign_binary_path lib/conda/envs/openfold_venv/bin/kalign \
+    --config_preset "model_1_ptm" \
     --openfold_checkpoint_path openfold/resources/openfold_params/finetuning_ptm_2.pt
 ```
 
@@ -324,14 +331,11 @@ multi-node distributed training, validation, and so on. For more information,
 consult PyTorch Lightning documentation and the `--help` flag of the training 
 script.
 
-If you're using your own MSAs or MSAs from the RODA repository, make sure that
-the `alignment_dir` contains one directory per chain and that each of these
-contains alignments (.sto, .a3m, and .hhr) corresponding to that chain.
-
 Note that, despite its variable name, `mmcif_dir` can also contain PDB files 
-or even ProteinNet .core files. To emulate the AlphaFold training procedure, 
-which uses a self-distillation set subject to special preprocessing steps, use
-the family of `--distillation` flags.
+or even ProteinNet .core files. 
+
+To emulate the AlphaFold training procedure, which uses a self-distillation set 
+subject to special preprocessing steps, use the family of `--distillation` flags.
 
 In cases where it may be burdensome to create separate files for each chain's
 alignments, alignment directories can be consolidated using the scripts in 
@@ -343,7 +347,7 @@ resulting index, `super.index`, can be passed to the training script flags
 containing the phrase `alignment_index`. In this scenario, the `alignment_dir`
 flags instead represent the directory containing the compiled alignment
 databases. Both the training and distillation datasets can be compiled in this
-way.
+way. Anecdotally, this can speed up training in I/O-bottlenecked environments.
 
 ## Testing
 
