@@ -30,8 +30,8 @@ def drmsd(structure_1, structure_2, mask=None):
         drmsd = drmsd * (mask[..., None] * mask[..., None, :])
     drmsd = torch.sum(drmsd, dim=(-1, -2))
     n = d1.shape[-1] if mask is None else torch.sum(mask, dim=-1)
-    # TODO: check if every element in n is > 1 
-    drmsd = drmsd * (1 / (n * (n - 1))) # if n > 1 else (drmsd * 0.)
+    # don't need if batch size = 1: check if every element in n is > 1 
+    drmsd = drmsd * (1 / (n * (n - 1))) if n > 1 else (drmsd * 0.)
     drmsd = torch.sqrt(drmsd)
 
     return drmsd
